@@ -6,7 +6,7 @@ from .models import *
 from .schemas import *
 from .auth import current,editor,supervisor,issue,password_hash
 from .common import dump,get
-from . import navigation_service as nav,transect_service as transect,school_service as school,biology_service as biology,resurvey_service as resurvey,release_service as release
+from . import navigation_service as nav,transect_service as transect,school_service as school,biology_service as biology,resurvey_service as resurvey,release_service as release,estimate_service as estimate
 router=APIRouter()
 @router.post('/auth/login')
 def login(data:Login,db=Depends(session)):
@@ -15,7 +15,9 @@ def login(data:Login,db=Depends(session)):
     return {'token':issue(row),'username':row.username,'role':row.role}
 @router.get('/workspace')
 def workspace(db=Depends(session),user=Depends(current)):
-    return {m.__tablename__:[dump(r) for r in db.scalars(select(m).order_by(m.id))] for m in [Boat,Cruise,NavigationClosure,Transect,Echo,SchoolAnalysis,SchoolReview,Net,NetCalibration,BioSample,MissingInterval,Resurvey,SurveyRelease]}
+    data={m.__tablename__:[dump(r) for r in db.scalars(select(m).order_by(m.id))] for m in [Boat,Cruise,NavigationClosure,Transect,Echo,SchoolAnalysis,SchoolReview,Net,NetCalibration,BioSample,MissingInterval,Resurvey,SurveyRelease,LengthEstimate]}
+    data['length_basis']={str(c.id):estimate.basis_sha256(db,c.id) for c in db.scalars(select(Cruise))}
+    return data
 @router.post('/cruises')
 def create(data:CruiseInput,db=Depends(session),user=Depends(editor)):return nav.create(db,data,user)
 @router.patch('/cruises/{id}/schedule')
@@ -36,6 +38,8 @@ def simulate(id:int,db=Depends(session),user=Depends(editor)):return transect.si
 def analyze(data:AnalysisInput,db=Depends(session),user=Depends(editor)):return school.enqueue(db,data,user)
 @router.post('/schools/{id}/review')
 def review(id:int,data:ReviewInput,db=Depends(session),user=Depends(supervisor)):return school.review(db,id,data,user)
+@router.post('/cruises/{id}/length-estimates')
+def length_estimate(id:int,db=Depends(session),user=Depends(editor)):return estimate.compute(db,id,user)
 @router.post('/calibrations')
 def calibration(data:CalibrationInput,db=Depends(session),user=Depends(supervisor)):return biology.calibrate(db,data,user)
 @router.post('/samples')

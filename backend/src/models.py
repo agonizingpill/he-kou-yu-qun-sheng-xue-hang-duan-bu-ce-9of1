@@ -120,6 +120,16 @@ class Resurvey(Base):
     continuation_id:Mapped[int]=mapped_column(ForeignKey('transects.id'),unique=True)
     status:Mapped[str]=mapped_column(String(20),default='planned')
     evidence:Mapped[str]=mapped_column(String(200),default='')
+class LengthEstimate(Base):
+    __tablename__='length_estimates'
+    id:Mapped[int]=mapped_column(primary_key=True)
+    cruise_id:Mapped[int]=mapped_column(ForeignKey('cruises.id'))
+    basis_sha256:Mapped[str]=mapped_column(String(64))
+    note:Mapped[str]=mapped_column(String(200),default='')
+    samples_used:Mapped[list]=mapped_column(JSON,default=list)
+    group_errors:Mapped[list]=mapped_column(JSON,default=list)
+    estimates:Mapped[list]=mapped_column(JSON,default=list)
+    at:Mapped[datetime]=mapped_column(DateTime(timezone=True),default=now)
 class SurveyRelease(Base):
     __tablename__='survey_releases'
     id:Mapped[int]=mapped_column(primary_key=True)
